@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co; img-src 'self' data:; manifest-src 'self'; base-uri 'self'; form-action 'self'">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#2b52c4">
+<title>RT Task Log</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="styles.css">
+<style>html{color-scheme:light}body{margin:0;font-size:14px}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}[hidden]{display:none!important}img{max-width:100%}</style>
+</head>
+<body>
+
+<!-- Shown when config.js has not been filled in -->
+<div class="auth" id="setup-screen" hidden>
+  <div class="brand"><span class="mark" aria-hidden="true">✓</span>Task Log</div>
+  <div class="setup">
+    <strong>One step left.</strong>
+    <p>Open <code>config.js</code> and paste in your Supabase project URL and anon key, then reload this page. The README walks through it.</p>
+  </div>
+</div>
+
+<!-- Sign-in -->
+<div class="auth" id="auth-screen" hidden>
+  <div class="brand"><span class="mark" aria-hidden="true">✓</span>Task Log</div>
+  <p>Sign in to see your tasks on this device.</p>
+  <form id="auth-form" autocomplete="on" novalidate>
+    <div class="field"><label for="auth-email">Email</label><input id="auth-email" type="email" autocomplete="username" required></div>
+    <div class="field"><label for="auth-pass">Password</label><input id="auth-pass" type="password" autocomplete="current-password" required></div>
+    <div class="err" id="auth-err" role="alert"></div>
+    <button class="primary" id="auth-btn" type="submit">Sign in</button>
+  </form>
+</div>
+
+<!-- App -->
+<div class="wrap" id="app" hidden>
+  <header class="top">
+    <div class="brand"><span class="mark" aria-hidden="true">✓</span>Task Log</div>
+    <div class="right">
+      <div class="tabs" role="tablist" aria-label="View">
+        <button role="tab" id="tab-day" aria-selected="true" data-view="day">Day</button>
+        <button role="tab" id="tab-open" aria-selected="false" data-view="open">Open tasks</button>
+      </div>
+      <button class="signout" id="signout" type="button">Sign out</button>
+    </div>
+  </header>
+
+  <div id="notices"></div>
+
+  <form class="add" id="qa" autocomplete="off">
+    <input id="qa-title" placeholder="What needs doing?" aria-label="New task" maxlength="200" required>
+    <select id="qa-prio" aria-label="Priority">
+      <option value="normal">Normal</option>
+      <option value="high">High</option>
+      <option value="low">Low</option>
+    </select>
+    <input id="qa-cat" list="cats" placeholder="Category" aria-label="Category" maxlength="40">
+    <button class="primary" id="qa-btn" type="submit">Add task</button>
+  </form>
+  <datalist id="cats"></datalist>
+
+  <main id="main" aria-live="polite"></main>
+  <div class="sync" id="sync"></div>
+</div>
+
+<div class="scrim" id="scrim" hidden>
+  <form class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sh-h" autocomplete="off">
+    <h2 id="sh-h">Edit task</h2>
+    <div class="field"><label for="f-title">Task</label><input id="f-title" maxlength="200" required></div>
+    <div class="field"><label for="f-notes">Notes</label><textarea id="f-notes" maxlength="4000" placeholder="Details, links, next step…"></textarea></div>
+    <div class="row2">
+      <div class="field"><label for="f-status">Status</label>
+        <select id="f-status"><option value="todo">To do</option><option value="in_progress">In progress</option><option value="blocked">Blocked</option><option value="done">Done</option></select></div>
+      <div class="field"><label for="f-prio">Priority</label>
+        <select id="f-prio"><option value="high">High</option><option value="normal">Normal</option><option value="low">Low</option></select></div>
+    </div>
+    <div class="field"><label for="f-prog">Progress <span class="num" id="f-prog-out">0%</span></label><input type="range" id="f-prog" min="0" max="100" step="10"></div>
+    <div class="field"><label for="f-cat">Category</label><input id="f-cat" list="cats" maxlength="40"></div>
+    <div class="row2">
+      <div class="field"><label for="f-date">Logged for</label><input type="date" id="f-date" required></div>
+      <div class="field"><label for="f-due">Due date</label><input type="date" id="f-due"></div>
+    </div>
+    <div class="stamp" id="f-stamp"></div>
+    <div class="err" id="f-err" role="alert"></div>
+    <div class="actions">
+      <button type="button" class="danger" id="f-del">Delete</button>
+      <button type="button" class="ghost" id="f-cancel">Cancel</button>
+      <button type="submit" class="primary">Save</button>
+    </div>
+  </form>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.80.0/dist/umd/supabase.js" integrity="sha384-i0m00Vn1ERlKXxNWSa87g6OUB7eLxpmsQoNF68IHuQVtfJTebIca7XhFsYt9h/gN" crossorigin="anonymous"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

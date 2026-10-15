@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co; img-src 'self' data:; manifest-src 'self'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co; img-src 'self' data:; manifest-src 'self'; worker-src 'self'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="no-referrer">
 <meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#2b52c4">
@@ -40,16 +40,31 @@
   </form>
 </div>
 
+<!-- First sign-in: set name + own password -->
+<div class="auth" id="welcome-screen" hidden>
+  <div class="brand"><span class="mark" aria-hidden="true">✓</span>Task Log</div>
+  <p>Welcome! Before you start, tell us your name and replace your temporary password.</p>
+  <form id="welcome-form" autocomplete="on" novalidate>
+    <div class="field"><label for="wl-name">Your name</label><input id="wl-name" autocomplete="name" maxlength="60" required></div>
+    <div class="field"><label for="wl-pass">New password</label><input id="wl-pass" type="password" autocomplete="new-password" minlength="8" required></div>
+    <div class="field"><label for="wl-pass2">Type it again</label><input id="wl-pass2" type="password" autocomplete="new-password" minlength="8" required></div>
+    <p class="fine">Your tasks are visible to you and your manager.</p>
+    <div class="err" id="wl-err" role="alert"></div>
+    <button class="primary" id="wl-btn" type="submit">Save and continue</button>
+  </form>
+</div>
+
 <!-- App -->
 <div class="wrap" id="app" hidden>
   <header class="top">
-    <div class="brand"><span class="mark" aria-hidden="true">✓</span>Task Log</div>
+    <div class="brand"><span class="mark" aria-hidden="true">✓</span>Task Log <span class="netpill" id="netpill" role="status" hidden></span></div>
     <div class="right">
       <div class="tabs" role="tablist" aria-label="View">
         <button role="tab" id="tab-day" aria-selected="true" data-view="day">Day</button>
         <button role="tab" id="tab-open" aria-selected="false" data-view="open">Open tasks</button>
+        <button role="tab" id="tab-team" aria-selected="false" data-view="team" hidden>Team</button>
       </div>
-      <button class="signout" id="signout" type="button">Sign out</button>
+      <button class="signout" id="acct-btn" type="button" aria-label="Account">Account</button>
     </div>
   </header>
 
@@ -65,10 +80,21 @@
     <input id="qa-cat" list="cats" placeholder="Category" aria-label="Category" maxlength="40">
     <button class="primary" id="qa-btn" type="submit">Add task</button>
   </form>
+  <form class="add assign" id="assign" autocomplete="off" hidden>
+    <select id="as-who" aria-label="Assign to"><option value="">Assign to…</option></select>
+    <input id="as-title" placeholder="Task to assign" aria-label="Task to assign" maxlength="200" required>
+    <input id="as-due" type="date" aria-label="Due date (optional)" title="Due date (optional)">
+    <select id="as-prio" aria-label="Priority">
+      <option value="normal">Normal</option>
+      <option value="high">High</option>
+      <option value="low">Low</option>
+    </select>
+    <button class="primary" type="submit">Assign</button>
+  </form>
   <datalist id="cats"></datalist>
 
   <main id="main" aria-live="polite"></main>
-  <div class="sync" id="sync"></div>
+  <div class="foot"><span class="sync" id="sync"></span><span class="fine" id="privacy" hidden>Your tasks are visible to you and your manager.</span></div>
 </div>
 
 <div class="scrim" id="scrim" hidden>
@@ -88,12 +114,29 @@
       <div class="field"><label for="f-date">Logged for</label><input type="date" id="f-date" required></div>
       <div class="field"><label for="f-due">Due date</label><input type="date" id="f-due"></div>
     </div>
+    <p class="hint" id="f-hint" hidden></p>
     <div class="stamp" id="f-stamp"></div>
     <div class="err" id="f-err" role="alert"></div>
     <div class="actions">
       <button type="button" class="danger" id="f-del">Delete</button>
       <button type="button" class="ghost" id="f-cancel">Cancel</button>
-      <button type="submit" class="primary">Save</button>
+      <button type="submit" class="primary" id="f-save">Save</button>
+    </div>
+  </form>
+</div>
+
+<div class="scrim" id="acct-scrim" hidden>
+  <form class="sheet" id="acct" role="dialog" aria-modal="true" aria-labelledby="ac-h" autocomplete="off" novalidate>
+    <h2 id="ac-h">Your account</h2>
+    <p class="stamp" id="ac-who"></p>
+    <div class="field"><label for="ac-name">Your name</label><input id="ac-name" autocomplete="name" maxlength="60" required></div>
+    <div class="field"><label for="ac-pass">New password <span class="opt">(leave blank to keep)</span></label><input id="ac-pass" type="password" autocomplete="new-password"></div>
+    <div class="field"><label for="ac-pass2">Type new password again</label><input id="ac-pass2" type="password" autocomplete="new-password"></div>
+    <div class="err" id="ac-err" role="alert"></div>
+    <div class="actions">
+      <button type="button" class="danger" id="ac-signout">Sign out</button>
+      <button type="button" class="ghost" id="ac-cancel">Cancel</button>
+      <button type="submit" class="primary" id="ac-save">Save</button>
     </div>
   </form>
 </div>
